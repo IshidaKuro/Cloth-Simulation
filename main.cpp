@@ -36,6 +36,9 @@ GLfloat lastFrame = 0.0f;
 //declare the number of particles in the simulation
 const int numberOfParticles = 100;
 
+float springStiffness = 90;
+float springDampening = 55;
+float springRestingLength = 0.01;
 // main function
 int main()
 {
@@ -85,14 +88,14 @@ int main()
 		//correct
 		if (i % 10 != 9)
 		{
-			Hooke *spring = new Hooke(&p[i + 1], &p[i], 60, 25, .0001);
+			Hooke *spring = new Hooke(&p[i + 1], &p[i], springStiffness, springDampening, springRestingLength);
 			p[i].addForce(spring);
 		}
 		//correct
 		if (i % 10 != 0)
 		
 		{
-				Hooke *spring2 = new Hooke(&p[i - 1], &p[i], 60, 25, .0001);
+				Hooke *spring2 = new Hooke(&p[i - 1], &p[i], springStiffness, springDampening, springRestingLength);
 				p[i].addForce(spring2);
 				
 		}
@@ -100,7 +103,7 @@ int main()
 		if (i >9)
 		
 		{
-				Hooke *spring3 = new Hooke(&p[i - 10], &p[i], 60, 25, .0001);
+				Hooke *spring3 = new Hooke(&p[i - 10], &p[i], springStiffness, springDampening, springRestingLength);
 				p[i].addForce(spring3);
 				
 		}
@@ -108,7 +111,7 @@ int main()
 		if (i < 90)
 		
 		{
-				Hooke *spring4 = new Hooke(&p[i + 10], &p[i], 60, 25, .0001);
+				Hooke *spring4 = new Hooke(&p[i + 10], &p[i], springStiffness, springDampening, springRestingLength);
 				p[i].addForce(spring4);
 				
 		}
