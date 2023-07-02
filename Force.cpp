@@ -42,10 +42,9 @@ glm::vec3 Force::apply(float mass, const glm::vec3 & pos, const glm::vec3 & vel)
 	  float springStiffness = m_ks;
 	  float v1 = glm::dot(e,m_b1->getVel());
 	  float v2 = glm::dot(e,m_b2->getVel());
-	  if ((v1 = 0))
+	  if (v1 == 0)
 	  {
-		  v1 = -v2;
-	  
+		  v1 = -v2;	  
 	  }
 	  float fsd = -(m_ks * displacement) - (m_kd * (v1 - v2));
 	  //add the forces to get the hooke force

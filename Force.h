@@ -51,12 +51,9 @@ private:
 class Hooke : public Force {
  public:
 	 Hooke() {}
-	 Hooke(Body * b1, Body * b2, float ks, float kd, float rest) {
+	 Hooke(Body* b1, Body* b2, float ks, float kd, float rest) {
 		 m_ks = ks; m_kd = kd; m_rest = rest; m_b1 = b1; m_b2 = b2;
 		}
-	
-		 // get and set methods
-		 // you can write these yourself as necessary
 		
 		 // physics
 		 glm::vec3 apply(float mass, const glm::vec3 & pos, const glm::vec3 & vel);

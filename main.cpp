@@ -33,12 +33,26 @@ using namespace std;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-//declare the number of particles in the simulation
-const int numberOfParticles = 100;
 
-float springStiffness = 90;
-float springDampening = 55;
-float springRestingLength = 0.01;
+const int gridX = 16;
+const int gridY = 16;
+
+
+//declare the number of particles in the simulation
+constexpr int numberOfParticles = gridX * gridY;
+
+
+const float particleMass = 0.1f;
+
+//spring values
+const float springStiffness = 1.65f;
+const float springDamping = 1.5f;
+const float springRestingLength = 0.01f;
+
+Gravity* g = new Gravity;
+
+const int offsets[4][2] = {  {0, 1}, {1,1},{-1, 1}, {1,0} };
+
 // main function
 int main()
 {
@@ -58,73 +72,50 @@ int main()
 	
 	// create particles
 	
-	
-	Particle p[numberOfParticles];
+	vector<vector<Particle>> particles(gridX, vector<Particle>(gridY));
+
+
 	float x = 0.0;
 	float z = 0.0;
-	int c=0;
-	int d=0;
+	
 
-	for(int i = 0; i < numberOfParticles; i++)
+	for (int i = 0; i < gridX; i++)
 	{
-		
-		
-		if (d == 10)
+		for (int j = 0; j < gridY; j++)
 		{
-			c++;
-			d = 0;
+			x = ((i * 9.8 / gridX) - 4.9);
+			z = ((j * 9.8 / gridY) - 4.9);
+			particles[i][j].setMass(particleMass);
+			particles[i][j].setPos(glm::vec3(x, 8.0, z));
+			particles[i][j].getMesh().setShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
+			particles[i][j].addForce(g);
 		}
-		x = (d*9.8 / sqrt(numberOfParticles) - 4.9);
-		z = (c*9.8 / sqrt(numberOfParticles) - 4.9);
-
-		
-		//cout << "loading (" << x << ", 8.0, " << z << ")";
-		p[i].setPos(glm::vec3(x, 8.0, z));
-		
-		p[i].getMesh().setShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
-		
-		Gravity *g = new Gravity;
-		p[i].addForce(g);
-		//correct
-		if (i % 10 != 9)
-		{
-			Hooke *spring = new Hooke(&p[i + 1], &p[i], springStiffness, springDampening, springRestingLength);
-			p[i].addForce(spring);
-		}
-		//correct
-		if (i % 10 != 0)
-		
-		{
-				Hooke *spring2 = new Hooke(&p[i - 1], &p[i], springStiffness, springDampening, springRestingLength);
-				p[i].addForce(spring2);
-				
-		}
-		//correct
-		if (i >9)
-		
-		{
-				Hooke *spring3 = new Hooke(&p[i - 10], &p[i], springStiffness, springDampening, springRestingLength);
-				p[i].addForce(spring3);
-				
-		}
-		//correct
-		if (i < 90)
-		
-		{
-				Hooke *spring4 = new Hooke(&p[i + 10], &p[i], springStiffness, springDampening, springRestingLength);
-				p[i].addForce(spring4);
-				
-		}
-		d++;
-		
 	}
-	
 
+	for (int i = 0; i < gridX; i++)
+	{
+		for (int j = 0; j < gridY; j++)
+		{
+			//attach springs to neigboring particles
+			for (int k = 0; k < 4; k++) {
 
-	
+				int neighborX =  i + offsets[k][0];
+				int neighborY = j + offsets[k][1];
 
-	
-	
+				// Check if the neighbor is within the grid bounds
+				if ( 0 <= neighborX && neighborX < gridX && neighborY >= 0 && neighborY < gridY) {
+					
+					// Connect the current point with the neighbor
+					Hooke* spring = new Hooke(&particles[i][j], &particles[neighborX][neighborY], springStiffness, springDamping, springRestingLength);
+					Hooke* spring2 = new Hooke(&particles[neighborX][neighborY], &particles[i][j], springStiffness, springDamping, springRestingLength);
+					particles[neighborX][neighborY].addForce(spring);
+					particles[i][j].addForce(spring2);
+				}
+			}
+
+		
+		}
+	}	
 	/////
 	double t = 0.0;
 	double dt = 0.01;
@@ -149,84 +140,76 @@ int main()
 
 		while (accumulator >= dt)
 		{
-
-		
-
-
-
-			//	
-
-			for (int i = 0; i<numberOfParticles; i++)//-1 denotes 2 anchor points
+			
+			for (int i = 0; i < gridX; i++)
 			{
-
-				if (i != 0 && i!=9 && i!=90 && i!=99)
+				for (int j = 0; j < gridY; j++)
 				{
+					if(i == 0 || i == gridX-1  || j == 0 || j == gridX-1)
+					{
+						continue;
+					}
+					
 					//calculate the total force being applied to the particle
 
-					p[i].setAcc(p[i].applyForces(p[i].getPos(), p[i].getVel(), t, dt));
-
-
-
+					particles[i][j].setAcc(particles[i][j].applyForces(particles[i][j].getPos(), particles[i][j].getVel(), t, dt));
 
 
 					//calculate the particle's new velocity based on the acceleration
 
-
-
-					p[i].setVel(p[i].getVel() + (p[i].getAcc()  * dt));
+					particles[i][j].setVel(particles[i][j].getVel() + (particles[i][j].getAcc()  * dt));
 
 					//set the particle's new position
 
-					p[i].setPos(p[i].getPos() + p[i].getVel()*dt);
-
+					particles[i][j].setPos(particles[i][j].getPos() + particles[i][j].getVel()*dt);
 
 					//collisions with room
 
 					{
 						//if the particle is outside the y boundaries of the "cube", bounce off the "wall"
 
-						if (p[i].getPos().y < 0.0f)
+						if (particles[i][j].getPos().y < 0.0f)
 						{
-							p[i].setPos(1, 0); //set the y co ordinate to 0
-							p[i].setVel(p[i].getVel() * glm::vec3(1.0f, -0.5f, 1.0f)); //invert the y velocity to simulate a "bounce"
+							particles[i][j].setPos(1, 0); //set the y co ordinate to 0
+							particles[i][j].setVel(particles[i][j].getVel() * glm::vec3(1.0f, -0.5f, 1.0f)); //invert the y velocity to simulate a "bounce"
 
 						}
 
 
-						if (p[i].getPos().y > 10.0f)
+						if (particles[i][j].getPos().y > 10.0f)
 						{
-							p[i].setPos(1, 10);
-							p[i].setVel(p[i].getVel() * glm::vec3(1.0f, -.5f, 1.0f)); //invert the y velocity to simulate a "bounce"
+							particles[i][j].setPos(1, 10);
+							particles[i][j].setVel(particles[i][j].getVel() * glm::vec3(1.0f, -0.5f, 1.0f)); //invert the y velocity to simulate a "bounce"
 						}
 
 						//if the particle is outside x boundaries of the "cube", bounce off the "wall"
-						if (p[i].getPos().x < -5.0f)
+						if (particles[i][j].getPos().x < -5.0f)
 						{
-							p[i].setPos(0, -5);
-							p[i].setVel(p[i].getVel() * glm::vec3(-.5f, 1.0f, 1.0f));
+							particles[i][j].setPos(0, -5);
+							particles[i][j].setVel(particles[i][j].getVel() * glm::vec3(-.5f, 1.0f, 1.0f));
 
 						}
 
-						if (p[i].getPos().x > 5.0f)
+						if (particles[i][j].getPos().x > 5.0f)
 						{
-							p[i].setPos(0, 5);
-							p[i].setVel(p[i].getVel() * glm::vec3(-.5f, 1.0f, 1.0f));
+							particles[i][j].setPos(0, 5);
+							particles[i][j].setVel(particles[i][j].getVel() * glm::vec3(-.5f, 1.0f, 1.0f));
 
 						}
 
 						//if the particle is outside z boundaries of the "cube", bounce off the "wall"
-						if (p[i].getPos().z < -5.0f)
+						if (particles[i][j].getPos().z < -5.0f)
 						{
-							p[i].setPos(2, -5);
-							p[i].setVel(p[i].getVel() * glm::vec3(1.0f, 1.0f, -.5f));
+							particles[i][j].setPos(2, -5);
+							particles[i][j].setVel(particles[i][j].getVel() * glm::vec3(1.0f, 1.0f, -.5f));
 
 
 						}
 
-						if (p[i].getPos().z > 5.0f)
+						if (particles[i][j].getPos().z > 5.0f)
 						{
-							p[i].setPos(2, 5);
-							p[i].setVel(p[i].getVel() * glm::vec3(1.0f, 1.0f, -.5f));
+							particles[i][j].setPos(2, 5);
+							particles[i][j].setVel(particles[i][j].getVel() * glm::vec3(1.0f, 1.0f, -.5f));
 
 						}
 					}
@@ -262,11 +245,12 @@ int main()
 		app.draw(plane);
 		// draw particles
 
-		//for(int i; i<5; i++) //- for loop doesn't draw anything
-		for each (Particle(p) in p)
+		for (int i = 0; i < gridX; i++)
 		{
-			//app.draw(particles[i].getMesh());
-			app.draw(p.getMesh());
+			for (int j = 0; j < gridY; j++)
+			{
+				app.draw(particles[i][j].getMesh());
+			}
 		}
 		// draw demo objects
 	/*	app.draw(cube);
